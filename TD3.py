@@ -18,9 +18,9 @@ class Actor(nn.Module):
 		self.l1 = nn.Linear(state_dim, 256)
 		self.l2 = nn.Linear(256, 256)
 		self.l3 = nn.Linear(256, action_dim)
-		
+
 		self.max_action = max_action
-		
+
 
 	def forward(self, state):
 		a = F.relu(self.l1(state))
@@ -94,17 +94,25 @@ class TD3(object):
 		self.policy_freq = policy_freq
 
 		self.total_it = 0
+		self.num_timesteps = 0
 
 
 	def select_action(self, state):
 		state = torch.FloatTensor(state.reshape(1, -1)).to(device)
 		return self.actor(state).cpu().data.numpy().flatten()
 
+	def predict(self, obs, state=None, mask=None, deterministic=True):
+		obs = torch.FloatTensor(obs.reshape(1, -1)).to(device)
+		with torch.no_grad():
+			return self.actor(obs).cpu().numpy(), None
+
+	def get_env(self):
+		return None
 
 	def train(self, replay_buffer, batch_size=100):
 		self.total_it += 1
 
-		# Sample replay buffer 
+		# Sample replay buffer
 		state, action, next_state, reward, not_done = replay_buffer.sample(batch_size)
 
 		with torch.no_grad():
@@ -112,7 +120,7 @@ class TD3(object):
 			noise = (
 				torch.randn_like(action) * self.policy_noise
 			).clamp(-self.noise_clip, self.noise_clip)
-			
+
 			next_action = (
 				self.actor_target(next_state) + noise
 			).clamp(-self.max_action, self.max_action)
@@ -138,8 +146,8 @@ class TD3(object):
 
 			# Compute actor losse
 			actor_loss = -self.critic.Q1(state, self.actor(state)).mean()
-			
-			# Optimize the actor 
+
+			# Optimize the actor
 			self.actor_optimizer.zero_grad()
 			actor_loss.backward()
 			self.actor_optimizer.step()
@@ -155,7 +163,7 @@ class TD3(object):
 	def save(self, filename):
 		torch.save(self.critic.state_dict(), filename + "_critic")
 		torch.save(self.critic_optimizer.state_dict(), filename + "_critic_optimizer")
-		
+
 		torch.save(self.actor.state_dict(), filename + "_actor")
 		torch.save(self.actor_optimizer.state_dict(), filename + "_actor_optimizer")
 
@@ -168,4 +176,3 @@ class TD3(object):
 		self.actor.load_state_dict(torch.load(filename + "_actor"))
 		self.actor_optimizer.load_state_dict(torch.load(filename + "_actor_optimizer"))
 		self.actor_target = copy.deepcopy(self.actor)
-		
