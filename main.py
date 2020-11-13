@@ -95,7 +95,7 @@ if __name__ == "__main__":
 	    eval_env,
 	    callback_on_new_best=None,
 	    best_model_save_path=None,
-	    n_eval_episodes=2,
+	    n_eval_episodes=10,
 	    log_path=save_path,
 	    eval_freq=args.eval_freq,
 	    deterministic=True,
